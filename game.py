@@ -30,12 +30,12 @@ FPS = 10
 score = 0
 font = pygame.font.SysFont(None, 35)
 
-# متغيرات إضافية
-scale_factor = 1  # للتحجيم
-shear_x = 0       # للقص
-rotation_angle = 0  # للدوران
+# متغيرات إضافية (التحجيم، القص، والدوران)
+scale_factor = 1
+shear_x = 0
+rotation_angle = 0
 
-# الشخص الثاني: دوال الرسم
+# دالة رسم الثعبان
 def draw_snake(snake, scale_factor, shear_x, rotation_angle):
     for segment in snake:
         rect = pygame.Rect(segment[0], segment[1], CELL_SIZE * scale_factor, CELL_SIZE)
@@ -48,13 +48,16 @@ def draw_snake(snake, scale_factor, shear_x, rotation_angle):
         rotated_points = rotate_points(points, rect.center, rotation_angle)
         pygame.draw.polygon(screen, GREEN, rotated_points)
 
+# دالة رسم الطعام
 def draw_food(food):
     pygame.draw.rect(screen, RED, (*food, CELL_SIZE, CELL_SIZE))
 
+# دالة رسم النقاط
 def draw_score(score):
     score_text = font.render(f"Score: {score}", True, WHITE)
     screen.blit(score_text, (10, 10))
 
+# دالة لتدوير النقاط
 def rotate_points(points, center, angle):
     rad = math.radians(angle)
     cos_theta = math.cos(rad)
@@ -69,18 +72,20 @@ def rotate_points(points, center, angle):
         rotated.append((x_new + cx, y_new + cy))
     return rotated
 
-# الشخص الثالث: دوال الحركة والتصادم
+# دالة لتحريك الثعبان (الانعكاس عند الحواف)
 def move_snake(snake, direction, food):
     head_x = snake[0][0] + direction[0]
     head_y = snake[0][1] + direction[1]
 
-    # إذا اصطدم الثعبان بالحواف
-    if head_x >= WIDTH or head_x < 0:
+    # التحقق من الاصطدام بالحواف مع ارتداد سريع (بدون إنهاء اللعبة)
+    if head_x >= WIDTH:  # اصطدام الجدار الأيمن
         direction = (-direction[0], direction[1])  # انعكاس في الاتجاه الأفقي
-        head_x = snake[0][0] + direction[0]  # إعادة الثعبان لمكانه الجديد
-    if head_y >= HEIGHT or head_y < 0:
+    if head_x < 0:  # اصطدام الجدار الأيسر
+        direction = (-direction[0], direction[1])  # انعكاس في الاتجاه الأفقي
+    if head_y >= HEIGHT:  # اصطدام الجدار السفلي
         direction = (direction[0], -direction[1])  # انعكاس في الاتجاه الرأسي
-        head_y = snake[0][1] + direction[1]  # إعادة الثعبان لمكانه الجديد
+    if head_y < 0:  # اصطدام الجدار العلوي
+        direction = (direction[0], -direction[1])  # انعكاس في الاتجاه الرأسي
 
     head = (head_x, head_y)
     snake.insert(0, head)
@@ -90,18 +95,19 @@ def move_snake(snake, direction, food):
         snake.pop()
         return False, direction
 
+# دالة لتوليد الطعام في مكان عشوائي
 def spawn_food(snake):
     while True:
         pos = (random.randrange(0, WIDTH, CELL_SIZE), random.randrange(0, HEIGHT, CELL_SIZE))
         if pos not in snake:
             return pos
 
+# دالة للتحقق من التصادم مع نفسه
 def check_collision(snake):
     head = snake[0]
-    # الثعبان يخسر فقط إذا اصطدم بنفسه
     return head in snake[1:]
 
-# الشخص الرابع: الحلقة الرئيسية
+# دالة للتعامل مع الضغط على الأزرار
 def handle_keys(direction):
     global rotation_angle
     keys = pygame.key.get_pressed()
@@ -117,6 +123,15 @@ def handle_keys(direction):
         rotation_angle += 10  # دوران مع كل ضغطة على المسافة
     return direction
 
+# دالة لإظهار شاشة "Game Over"
+def game_over():
+    font = pygame.font.SysFont(None, 55)
+    game_over_text = font.render("Game Over!", True, WHITE)
+    screen.blit(game_over_text, (WIDTH // 3, HEIGHT // 2))
+    pygame.display.update()
+    pygame.time.wait(2000)  # انتظار لثانيتين قبل الخروج
+
+# الدالة الرئيسية لتشغيل اللعبة
 def main():
     global direction, snake, food, score, scale_factor, shear_x
     running = True
@@ -142,12 +157,8 @@ def main():
 
         # التحقق من التصادم مع نفسه
         if check_collision(snake):
-            # عكس الاتجاه فور الاصطدام
-            direction = (-direction[0], -direction[1])  # انعكاس الاتجاه
-            # تحديث مكان الرأس ليعكس الاتجاه
-            head_x = snake[0][0] + direction[0]
-            head_y = snake[0][1] + direction[1]
-            snake[0] = (head_x, head_y)
+            game_over()  # إظهار شاشة "Game Over" عند التصادم
+            break  # الخروج من اللعبة إذا اصطدم الثعبان بنفسه
 
         clock.tick(FPS)
 
